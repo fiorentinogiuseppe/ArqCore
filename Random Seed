@@ -1,0 +1,13 @@
+#$t2 guarda o S(seed) do arquivo 
+ #seed S
+  li $a0, 1	# random generator id (will be used later)
+  move $a1, $t2	# seed from file
+  li $v0, 40	# seed random number generator syscall
+  syscall
+  
+  li $a0, 1	# as said, this id is the same as random generator id
+	li $a1, 10000	# upper bound of the range
+	li $v0, 42	# random int range
+	syscall
+  
+  # $a0 now holds the random number
