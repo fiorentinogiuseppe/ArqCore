@@ -4,7 +4,9 @@
   buffer: .space 40
   bufferOut: .space 1024
   #dado, altura, esquerda, direita
+  .align 2
   no: .space 8000 # 500 nos com 16 bytes
+  
 
 .text
 Main:
@@ -16,19 +18,20 @@ Main:
 	#li $a0, 10 #valor 
 	jal RandomNumber #Pega o primeiro valor randomico para a raiz
 	jal InicializaAVL #inicializa o primeiro no\raiz
+	move $a0, $v1
 	
-	li $s0,2 # por no numero N de vezes que se quer inserir um número randomico na arvore
-	la $t5, ($s5)
+	li $s0,9 # por no numero N de vezes que se quer inserir um número randomico na arvore
+	la $t5, ($s6)
 	
 loop:
 	beqz $s0, sair
 	#la $a0, ($s0) #valor
 	jal RandomNumber #Pega o valor randomico para o novo no, o valor fica em $a0
-	la $a1, ($t5)#raiz
+	la $a1, ($s6)#raiz
 	
 	jal InsereAVL
 	addi $s0, $s0, -1 
-	addi $t5, $zero, +16
+	#addi $t5, $zero, -16
 	
 	j loop
 			
@@ -47,12 +50,14 @@ InicializaAVL:
 	la $t1, 0	#esquerda
 	la $t2, 0	#direita
 	
-	sb $a0, 0($s6)#valor 
-	sb $t0, 4($s6)#altura
+	
+	sw $a0, 0($s6)#valor .
+	sw $t0, 4($s6)#altura
 	sb $t1, 8($s6)#esquerda
 	sb $t2, 12($s6)#direita	
 	
-	add $s6, $s6 ,16 
+
+	addi $s6, $s6 ,16 
 	
 	move $v0, $s6 #retorna o no
 jr $ra
@@ -66,10 +71,13 @@ InsereAVL:
 	sw $a0, 4($sp)# save arguments
 	sw $a1, 0($sp)
 	
-	lb $t0, ($a1)#valor do no pai
+	bnez $a1, novoNo #se o no raiz == NULL, entao retorna um novo no inicial
+	jal InicializaAVL
+	move $a1, $v0
+	j AttAltura
+	novoNo:
+	lw $t0, ($a1)#valor do no pai
 	
-	beqz $a1, InicializaAVL #se o no raiz == NULL, entao retorna um novo no inicial
-
 	blt $a0, $t0,menor #se o valor novo é menor que o valor do no pai
 
 	bgt $a0, $t0, maior #se o valor novo é maior que o valor do no pai
@@ -82,21 +90,21 @@ InsereAVL:
 	
 	menor:
 	#se o valor novo é menor que o pai entao node->esquerdo recebe o retorno de InsereAVL($a0 = valor, $a1= node->esquerdo)
-		la $t2, 8($a1)#node->esquerdo
+		lw $t2, 8($a1)#node->esquerdo
 		move $a1, $t2 #poe node->esquerdo como parametro
 		jal InsereAVL 
-		
 
-		
-		move $t2, $v0 #pega retorno e poe em node->esquerdo
+		sw $v0, 8($a1)#pega retorno e poe em node->esquerdo
+		move $t2, $v0
 		j AttAltura
 	maior:
 	#se o valor novo é maior que o pai entao node->direito recebe o retorno de InsereAVL($a0 = valor, $a1= node->direito)
-		la $t2, 12($a1)#node->direito
+		lw $t2, 12($a1)#node->direito
+		
 		move $a1, $t2 #poe node->direito como parametro
 		jal InsereAVL 
 		
-		
+		sw $v0, 12($a1)
 		move $t2, $v0 #pega retorno e poe em node->direito
 		j AttAltura
 	
@@ -135,7 +143,7 @@ InsereAVL:
 		move $t4, $a0
 		
 		move $a0, $a1 #seta o parametro no
-		j FatorBalanceamento
+		jal FatorBalanceamento
 		move $t1, $v0 #Fator de balanceamento do no em $t1
 		
 		move $a1, $t3#guarda $a0 e $a1
@@ -235,7 +243,7 @@ AlturaNo:
 	beqz $a0, vazio #se no ==NULL, entao retorna 0
 	#caso contrario, retorna a altura do no
 	
-	lw $t0, 4($a0)#pega a altura do no
+	la $t0, 4($a0)#pega a altura do no
 	move $v0, $t0
 	jr $ra
 	
@@ -254,12 +262,17 @@ jr $ra
 
 #Recebe como $a0 o no
 FatorBalanceamento:
+#stack#
+addi $sp, $sp, -8 # pop 3 items from stack
+sw $a0, 0($sp) # restore original a1
+sw $ra, 4($sp) # and return address
+
 	li $v0, 0
 	beqz $a0, fatorExit #se no ==NULL, entao retorna 0
 	#caso contrario, retorna o fator de balanceamento do no
 	
-	lw $t1, 12($a0)#no da esquerda
-	lw $t2, 16($a0)#no da direita
+	la $t1, 12($a0)#no da esquerda
+	la $t2, 16($a0)#no da direita
  
 	#pega altura do no da esquerda
 	move $a0, $t1
@@ -274,6 +287,11 @@ FatorBalanceamento:
  	#altura do no da esquerda menos a altura do no da direita
 	sub $v0, $t1, $t2
 fatorExit:
+#stack#
+lw $a0, 0($sp) # restore original a1
+lw $ra, 4($sp) # return the address
+addi $sp, $sp, 8 # pop 2 items from stack
+
 jr $ra
 
 
@@ -282,12 +300,8 @@ RandomNumber:
 	li $a1, 10000	# upper bound of the range
 	li $v0, 42	# random int range
 	syscall
-li $v0, 1
-syscall
-li $a0, '\n'
-li $v0, 11
-syscall
-
+	
+	move $v1, $a0
 	# $a0 now holds the random number
 
 jr $ra
