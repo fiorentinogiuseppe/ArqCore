@@ -1,0 +1,350 @@
+.data
+  fileInput: .asciiz "tree.in"
+  fileOutput: .asciiz "tree.out"
+  buffer: .space 40
+  bufferOut: .space 1024
+  #dado, altura, esquerda, direita
+  no: .space 8000 # 500 nos com 16 bytes
+
+.text
+Main:
+	jal Read #le do arquivo o N e S
+#beqz $s1, sair #se N for igual a Zero entao não poe nenhum numero na arvore
+
+	la $s5, no # no raiz
+	la $s6, ($s5) #salva a posição atual do array
+	#li $a0, 10 #valor 
+	jal RandomNumber #Pega o primeiro valor randomico para a raiz
+	jal InicializaAVL #inicializa o primeiro no\raiz
+	
+	li $s0,2 # por no numero N de vezes que se quer inserir um número randomico na arvore
+	la $t5, ($s5)
+	
+loop:
+	beqz $s0, sair
+	#la $a0, ($s0) #valor
+	jal RandomNumber #Pega o valor randomico para o novo no, o valor fica em $a0
+	la $a1, ($t5)#raiz
+	
+	jal InsereAVL
+	addi $s0, $s0, -1 
+	addi $t5, $zero, +16
+	
+	j loop
+			
+sair:
+li $v0, 10
+syscall
+	
+LeArvore:
+
+jr $ra
+
+#Passa como parametro $a0 o valor do noh raiz
+#seta o noh raiz
+InicializaAVL:
+	la $t0, 1	#altura
+	la $t1, 0	#esquerda
+	la $t2, 0	#direita
+	
+	sb $a0, 0($s6)#valor 
+	sb $t0, 4($s6)#altura
+	sb $t1, 8($s6)#esquerda
+	sb $t2, 12($s6)#direita	
+	
+	add $s6, $s6 ,16 
+	
+	move $v0, $s6 #retorna o no
+jr $ra
+
+#recebe como $a0 o valor a ser adicionado no novo no
+#recebe como $a1 o no raiz
+InsereAVL:
+	##stack##
+	addi $sp, $sp, -12 # adjust stack for 2 items
+	sw $ra, 8($sp) # save return address
+	sw $a0, 4($sp)# save arguments
+	sw $a1, 0($sp)
+	
+	lb $t0, ($a1)#valor do no pai
+	
+	beqz $a1, InicializaAVL #se o no raiz == NULL, entao retorna um novo no inicial
+
+	blt $a0, $t0,menor #se o valor novo é menor que o valor do no pai
+
+	bgt $a0, $t0, maior #se o valor novo é maior que o valor do no pai
+	
+	move $v0, $a1 #Equal keys are not allowed in BST
+	addi $sp, $sp, 12 # if so, pop 3 itens from stack and rerurn
+	jr $ra
+	
+	#POR STACK PARA USAR RECURSAO
+	
+	menor:
+	#se o valor novo é menor que o pai entao node->esquerdo recebe o retorno de InsereAVL($a0 = valor, $a1= node->esquerdo)
+		la $t2, 8($a1)#node->esquerdo
+		move $a1, $t2 #poe node->esquerdo como parametro
+		jal InsereAVL 
+		
+
+		
+		move $t2, $v0 #pega retorno e poe em node->esquerdo
+		j AttAltura
+	maior:
+	#se o valor novo é maior que o pai entao node->direito recebe o retorno de InsereAVL($a0 = valor, $a1= node->direito)
+		la $t2, 12($a1)#node->direito
+		move $a1, $t2 #poe node->direito como parametro
+		jal InsereAVL 
+		
+		
+		move $t2, $v0 #pega retorno e poe em node->direito
+		j AttAltura
+	
+	AttAltura:
+		la $t2, 4($a1)#node->altura
+		
+		move $t3, $a1#guarda $a0 e $a1
+		move $t4, $a0
+		
+		la $t6, 8($t3)
+		move $a0, $t6
+		jal AlturaNo #pega altura do node->esquerdo e guarda em $v0
+		move $t6, $v0 #altura em esquerdo em $t6
+		
+		la $t7, 12($t3)
+		move $a0, $t7
+		jal AlturaNo #pega altura do node->direito e guarda em $v0
+		move $t7, $v0 #altura em direito em $t7
+		
+		move $a0, $t6
+		move $a1, $t7
+		jal Max #pega a maior altura e retorna em $v0
+		move $t5, $v0 
+		
+		addi $t2,$t5, 1 # 1+ a maior altura entre o no esquerdo e direito
+		
+		move $a1, $t3#guarda $a0 e $a1
+		move $a0, $t4
+		
+		la $t3, 4($a1)#altura
+		move $t3, $t2 #atribui a nova altura ao no
+		
+		j CheckBalance
+	CheckBalance:
+		move $t3, $a1#guarda $a0 e $a1
+		move $t4, $a0
+		
+		move $a0, $a1 #seta o parametro no
+		j FatorBalanceamento
+		move $t1, $v0 #Fator de balanceamento do no em $t1
+		
+		move $a1, $t3#guarda $a0 e $a1
+		move $a0, $t4
+		
+		j Balance
+		
+	Balance:
+	#$t1 tem guarda o fato de balanceamento
+		
+		li $t2, 1
+ 		sgt $t0, $t1, $t2 #se o Fator de balanceamento é maior que 1
+ 		bnez $t0, Left
+ 		
+ 		slti $t0,$t1, -1 #se o Fator de balanceamento é menor que -1
+ 		bnez $t0, Right
+ 		
+ 		move $v0, $a1
+ 		j insertExit
+ 		jr $ra #Caso esteja balanceado retorna o no sem modificações
+ 		
+ 		#balance > 1
+ 		Left:
+ 			#se o valor novo é menor que o valor do no esquerdo
+ 			la $t2, 8($a1) #carrega o no esquerdo
+ 			slt $t0, $a0, $t2
+ 			bnez $t0, LL
+ 			
+ 			#se o valor novo é maior que o valor do no esquerdo
+ 			la $t2, 8($a1) #carrega o no esquerdo
+ 			sgt $t0, $a0, $t2
+ 			bnez $t0, LR
+ 			
+
+ 			LR:
+ 				move $t3, $a1 #guarda $a1
+ 				move $a1, $t2 #no esquerdo como raiz
+ 				jal RotacaoEsquerda
+ 				move $t2, $v0 #node->left =  leftRotate(node->left);
+ 				
+ 				move $a1, $t3 #guarda $a1 de volta
+      				jal RotacaoDireita #return rightRotate(node);
+ 			j insertExit
+ 			LL:
+ 				# return rightRotate(node);
+ 				jal RotacaoDireita
+ 			j insertExit
+ 			
+ 		#balance < -1
+ 		Right:
+ 			#se o valor novo é menor que o valor do no direito
+ 			la $t2, 12($a1) #carrega o no direito
+ 			slt $t0, $a0, $t2
+ 			bnez $t0, RL
+ 			
+ 			#se o valor novo é maior que o valor do no direito
+ 			la $t2, 12($a1) #carrega o no direito
+ 			sgt $t0, $a0, $t2
+ 			bnez $t0, RR
+ 			
+
+ 			RL:
+ 				move $t3, $a1 #guarda $a1
+ 				move $a1, $t2 #no direito como raiz
+ 				jal RotacaoDireita
+ 				move $t2, $v0 #node->right = rightRotate(node->right);
+ 				
+       				move $a1, $t3 #guarda $a1 de volta
+       				jal RotacaoEsquerda # return leftRotate(node);
+ 			j insertExit
+ 			RR:
+ 				#return leftRotate(node);
+ 				jal RotacaoEsquerda 
+ 			j insertExit
+ 			#jr $ra
+ 			
+insertExit:
+#stack#
+		lw $a1, 0($sp) # restore original a1
+		lw $a0, 4($sp) # restore original a0
+		lw $ra, 8($sp) # and return address
+		addi $sp, $sp, 12 # pop 3 items from stack
+jr $ra
+
+#para rotacionar para a direita a subarvore de raiz $a1
+#retorna nova raiz
+RotacaoDireita:
+jr $ra
+
+#para rotacionar para a esquerda a subarvore de raiz $a1
+#retorna nova raiz
+RotacaoEsquerda:
+jr $ra
+
+#recebe como $a0 o no
+AlturaNo:
+	beqz $a0, vazio #se no ==NULL, entao retorna 0
+	#caso contrario, retorna a altura do no
+	
+	lw $t0, 4($a0)#pega a altura do no
+	move $v0, $t0
+	jr $ra
+	
+	vazio:
+	li $v0, 0
+jr $ra
+
+#recebe dois inteiros, um em $a0 e outro em $a1 e retorna o maior
+Max:
+	sgt $t1, $a0, $a1 #se $a0 for maior que $a1 $t1 recebe 1
+	move $v0, $a1
+	beqz $t1,maxExit # se $t1 é zero entao retorna $a1
+	move $v0, $a0 #caso contrario retorna $a0
+maxExit: 
+jr $ra
+
+#Recebe como $a0 o no
+FatorBalanceamento:
+	li $v0, 0
+	beqz $a0, fatorExit #se no ==NULL, entao retorna 0
+	#caso contrario, retorna o fator de balanceamento do no
+	
+	lw $t1, 12($a0)#no da esquerda
+	lw $t2, 16($a0)#no da direita
+ 
+	#pega altura do no da esquerda
+	move $a0, $t1
+	jal AlturaNo
+	move $t1, $v0
+ 
+ 	#pega altura do no da direita
+	move $a0, $t2
+	jal AlturaNo
+	move $t2, $v0
+ 
+ 	#altura do no da esquerda menos a altura do no da direita
+	sub $v0, $t1, $t2
+fatorExit:
+jr $ra
+
+
+RandomNumber:
+	li $a0, 1	# as said, this id is the same as random generator id
+	li $a1, 10000	# upper bound of the range
+	li $v0, 42	# random int range
+	syscall
+li $v0, 1
+syscall
+li $a0, '\n'
+li $v0, 11
+syscall
+
+	# $a0 now holds the random number
+
+jr $ra
+Read:
+# Open (for writing) a file that does not exist
+  li   $v0, 13       # system call for open file
+  la   $a0, fileInput#input file name
+  li   $a1, 0        # Open for writing (flags are 0: read, 1: write)
+  li   $a2, 0        # mode is ignored
+  syscall            # open a file (file descriptor returned in $v0)
+  move $s6, $v0      # save the file descriptor 
+  ###############################################################
+  # Read file just opened
+  li   $v0, 14       # system call for write to file
+  move $a0, $s6      # file descriptor 
+  la   $a1, buffer   # address of buffer from which to write
+  li   $a2, 44       # hardcoded buffer length
+  syscall            # write to file
+  ###############################################################
+  # Close the file 
+  li   $v0, 16       # system call for close file
+  move $a0, $s6      # file descriptor to close
+  syscall            # close file
+  
+  
+  ##PRECISA AJEITAR PRA PEGAR O NUMERO !
+  la $t1, buffer #Gets N
+  la $t2, buffer+4 #Gets S
+    
+  #seed S
+  li $a0, 1	# random generator id (will be used later)
+ # move $a1, $t2	# seed from file
+  li $a1, 12
+  li $v0, 40	# seed random number generator syscall
+  syscall
+     
+ jr $ra
+ 
+Write:
+# Open (for writing) a file that does not exist
+  li   $v0, 13       # system call for open file
+  la   $a0, fileOutput#output file name
+  li   $a1, 1        # Open for writing (flags are 0: read, 1: write)
+  li   $a2, 0        # mode is ignored
+  syscall            # open a file (file descriptor returned in $v0)
+  move $s6, $v0      # save the file descriptor 
+  ###############################################################
+  # Write to file just opened
+  li   $v0, 15       # system call for write to file
+  move $a0, $s6      # file descriptor 
+  la   $a1, bufferOut#address of buffer from which to write
+  li   $a2, 1024       # hardcoded buffer length
+  syscall            # write to file
+  ###############################################################
+  # Close the file 
+  li   $v0, 16       # system call for close file
+  move $a0, $s6      # file descriptor to close
+  syscall            # close file
+  
+jr $ra
