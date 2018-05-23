@@ -30,26 +30,27 @@ j main
 		la $s5, estrutura #root node
 		la $s6, ($s5) 	  #atual position in the array
 		
-		jal random
-		la $a0, ($a0)	  #valor 
+		#jal random
+		la $a0, 10	  #valor 
 		jal no	
 		
-		li $s0,5
+		li $s7,20
 		la $t5, ($s5)
 		loop:
-			beq $s0, 10, sair
+			beq $s7, 60, sair
 			
-			jal random
-			la $a1, ($a0) #valor
+			#jal random
+			la $a1, ($s7) #valor
 			la $a0, ($t5)#raiz
 			jal insere
 			
 			la $t5, ($v0) #nova raiz
 			
-			addi $s0, $s0, 1 
+			addi $s7, $s7, 10 
 			#addi $t5, $t6, -16
 		j loop
-			
+		
+
 		sair:j exit
 
 ########
@@ -189,13 +190,21 @@ j main
 			sw	$t1, 12($sp)
 			sw	$t0, 8($sp)
 			sw	$t5, 4($sp)
-			sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO	
+			sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
+			la 	$s5, ($ra)
 		
 		        la $a0, ($t0)
 			
 			jal getBalance
 			
+			lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
+			lw	$t5, 4($sp)
+			lw	$t0, 8($sp)
+			lw	$t1, 12($sp)
+			addiu   $sp,$sp,16
+			
 			la $t2, ($v0)
+			la $s0, ($t0)
 			
 			#left left case
 			blt $t2, 1, rightright
@@ -257,12 +266,8 @@ j main
 			
 			volt:
 			#return node
-			lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
-			lw	$t5, 4($sp)
-			lw	$t0, 8($sp)
-			lw	$t1, 12($sp)
-			addiu   $sp,$sp,16
-			la $v0, ($t5) 
+			la $v0, ($t5)
+			la $ra, ($s5)
 			jr $ra
    
 	altura: 
@@ -302,7 +307,7 @@ j main
 				#t3 subt
 				lw $a0, 4($t0) #esq
 				jal altura
-				la $t1, ($v0) # a
+				la $t4, ($v0) # a
 				
 				lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
 				lw	$t0, 4($sp)
@@ -317,7 +322,7 @@ j main
 				jal altura
 				la $t2, ($v0) # b
 			
-				sub $t3, $t1, $t2
+				sub $t3, $t4, $t2
 				
 				la $v0, ($t3)
 				lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
@@ -343,12 +348,18 @@ j main
 			addiu   $sp,$sp,-4     # aloca 1 posições na pilha
 			sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
 			
-
-			lw $a0, 4($t0) #esq
+			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
+ 			sw	$t2, 8($sp)
+ 			sw	$t1, 4($sp)
+			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
+			
+			
+			lw $a0, 4($s0) #esq
 			jal altura
 			la $t2, ($v0) # a
 			
-			lw $a0, 8($t0) #dir
+			
+			lw $a0, 8($s0) #dir
 			jal altura
 			la $t3, ($v0) # b
 			
@@ -361,15 +372,28 @@ j main
 			la $t5, ($v0)
 			addi $t5,$t5,1
 			
-			sb $t5, 12($t0) 
+			lw $t0, 0($sp)
+			lw $t1, 4($sp)
+			lw $t2, 8($sp)
+			addiu $sp, $sp, 12
+			
+			sb $t5, 12($t0)
+			 
 			
 			#y
 			
  			lw $a0, 4($t1) #esq
+ 			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
+ 			sw	$t2, 8($sp)
+ 			sw	$t1, 4($sp)
+			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
+ 			
+ 			la $t7, ($t1)
+ 			lw $a0, 4($t7) #dir
 			jal altura
 			la $t2, ($v0) # a
 			
-			lw $a0, 8($t1) #dir
+			lw $a0, 8($t7) #dir
 			jal altura
 			la $t3, ($v0) # b
 			
@@ -381,8 +405,13 @@ j main
 			
 			la $t5, ($v0)
 			addi $t5,$t5,1
+		
+			lw $t0, 0($sp)
+			lw $t1, 4($sp)
+			lw $t2, 8($sp)
+			addiu $sp, $sp, 12
 			
-			sb $t5, 12($t5) 
+			sb $t5, 12($t0)
  			
     			#Return new root
 			la $v0, ($t1)
@@ -403,8 +432,8 @@ j main
  
     			#Update heights
     			
-    			#addiu   $sp,$sp,-4     # aloca 1 posições na pilha
-			#sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
+    			addiu   $sp,$sp,-4     # aloca 1 posições na pilha
+			sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
 			la $t9, ($ra)
 			
 			#y
@@ -441,7 +470,7 @@ j main
 			sb $t5, 12($t1) 
  			
  			#x
- 			addiu   $sp,$sp,-4     # aloca 1 posições na pilha
+ 			addiu   $sp,$sp,-12     # aloca 1 posições na pilha
  			sw	$t2, 8($sp)
  			sw	$t1, 4($sp)
 			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
