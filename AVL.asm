@@ -51,6 +51,9 @@ j main
 		
 
 		sair:
+			li $a1, 25 #valor
+			la $a0, ($t5)#raiz
+			jal insere
 			la $a0, estrutura
 			jal posOrder
 			j exit
@@ -222,7 +225,7 @@ j main
 			#right right case
 			rightright: bge $t2, -1, leftright
 				lw $t4, 8($t0)
-				lw $t4, 0($t0) #right key
+				lw $t4, 0($t4) #right key
 				blt $t1,$t4,leftright
 				
 					la $a0, ($s0)
@@ -252,8 +255,8 @@ j main
         			li $v0, -1
         			bgt $t2, $v0, volt
 				lw $t4, 8($t0)
-				lw $t4, 0($t0) #right key
-				bgt $t4, $t1,volt
+				lw $t4, 0($t4) #right key
+				bgt $t1, $t4,volt
 					
 					lw $t0, 8($s0)
 					la $a0, ($t0)
@@ -386,7 +389,7 @@ j main
 			
 			#y
 			
- 			lw $a0, 4($t1) #esq
+ 			#lw $a0, 4($t1) #esq
  			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
  			sw	$t2, 8($sp)
  			sw	$t1, 4($sp)
@@ -423,7 +426,7 @@ j main
 			addiu   $sp,$sp,4
 			jr $ra
 			
-	rot_direita:
+	rot_direita:	##analisar agora aqui
 			
 			la $t0, ($a0)   #y
 			lw $t1, 4($t0)  #x=y->esq
@@ -442,19 +445,18 @@ j main
 			
 			#y
 			
- 			lw $a0, 4($t1) #esq
- 			
+ 			#lw $a0, 4($t1) #esq
  			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
  			sw	$t2, 8($sp)
  			sw	$t1, 4($sp)
 			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
  			
- 			
+ 			la $t7, ($t1)
+ 			lw $a0, 4($t7) #dir
 			jal altura
 			la $t2, ($v0) # a
 			
-
-			lw $a0, 8($t1) #dir
+			lw $a0, 8($t7) #dir
 			jal altura
 			la $t3, ($v0) # b
 			
@@ -463,29 +465,32 @@ j main
 			la $a1, ($t3)
 			
 			jal max 
+			
 			la $t5, ($v0)
 			addi $t5,$t5,1
-			
+		
 			lw $t0, 0($sp)
 			lw $t1, 4($sp)
 			lw $t2, 8($sp)
 			addiu $sp, $sp, 12
 			
-			sb $t5, 12($t1) 
+			sb $t5, 12($t1)
  			
  			#x
- 			addiu   $sp,$sp,-12     # aloca 1 posições na pilha
+ 						
+			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
  			sw	$t2, 8($sp)
  			sw	$t1, 4($sp)
 			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
- 			
- 			
- 			lw $a0, 4($t0) #esq
- 			la $t8, ($t0)
+			
+			
+			lw $a0, 4($t0) 
+			la $s2,($t0)
 			jal altura
 			la $t2, ($v0) # a
 			
-			lw $a0, 8($t8) #dir
+			
+			lw $a0, 8($s2) #dir
 			jal altura
 			la $t3, ($v0) # b
 			
@@ -498,13 +503,12 @@ j main
 			la $t5, ($v0)
 			addi $t5,$t5,1
 			
-			
 			lw $t0, 0($sp)
 			lw $t1, 4($sp)
 			lw $t2, 8($sp)
 			addiu $sp, $sp, 12
 			
-			sb $t5, 12($t0) 
+			sb $t5, 12($t0)
 
     			#Return new root
 			la $v0, ($t1)
