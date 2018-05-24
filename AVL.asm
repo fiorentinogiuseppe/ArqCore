@@ -37,7 +37,7 @@ j main
 		li $s7,10
 		li $t5, 0 #sem raiz
 		loop:
-			beq $s7, 0, sair
+			beq $s7, 60, sair
 			
 			#jal random
 			la $a1, ($s7) #valor
@@ -216,7 +216,7 @@ j main
 				bgt $t1, $t4,rightright
 					la $a0, ($t0)
 					jal rot_direita
-					la $t5, ($v0)
+					la $s0, ($v0)
 					j volt
 					
 			#right right case
@@ -227,7 +227,7 @@ j main
 				
 					la $a0, ($s0)
 					jal rot_esquerda
-					la $t5, ($v0)
+					la $s0, ($v0)
 					j volt
 
 			leftright: ble $t2, 1, rightleft
@@ -244,7 +244,7 @@ j main
 					la $a0, ($s0)
 					jal rot_direita	
 												
-					la $t5, ($v0)
+					la $s0, ($v0)
 					j volt
 			
         		rightleft: bge $t2, -1, volt
@@ -264,12 +264,12 @@ j main
 					la $a0, ($s0)
 					jal rot_esquerda
 												
-					la $t5, ($v0)
+					la $s0, ($v0)
 					j volt 
 			
 			volt:
 			#return node
-			la $v0, ($s0)
+			la $v0, ($s0) #problema aqui
 			la $ra, ($s5)
 			jr $ra
    
@@ -357,12 +357,13 @@ j main
 			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
 			
 			
-			lw $a0, 4($s0) #esq
+			lw $a0, 4($t0) 
+			la $s2,($t0)
 			jal altura
 			la $t2, ($v0) # a
 			
 			
-			lw $a0, 8($s0) #dir
+			lw $a0, 8($s2) #dir
 			jal altura
 			la $t3, ($v0) # b
 			
@@ -414,7 +415,7 @@ j main
 			lw $t2, 8($sp)
 			addiu $sp, $sp, 12
 			
-			sb $t5, 12($t0)
+			sb $t5, 12($t1)
  			
     			#Return new root
 			la $v0, ($t1)
