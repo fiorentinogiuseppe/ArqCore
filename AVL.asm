@@ -31,13 +31,13 @@ j main
 		la $s6, ($s5) 	  #atual position in the array
 		
 		#jal random
-		la $a0, 10	  #valor 
-		jal no	
+		#la $a0, 10	  #valor 
+		#jal no	
 		
-		li $s7,20
-		la $t5, ($s5)
+		li $s7,10
+		li $t5, 0 #sem raiz
 		loop:
-			beq $s7, 60, sair
+			beq $s7, 40, sair
 			
 			#jal random
 			la $a1, ($s7) #valor
@@ -45,13 +45,15 @@ j main
 			jal insere
 			
 			la $t5, ($v0) #nova raiz
-			
 			addi $s7, $s7, 10 
 			#addi $t5, $t6, -16
 		j loop
 		
 
-		sair:j exit
+		sair:
+			la $a0, estrutura
+			jal posOrder
+			j exit
 
 ########
 ##Tree##
@@ -60,7 +62,7 @@ j main
 	no:
 		la $t0, 0	#sbe
 		la $t1, 0	#sbd
-		la $t2, 0	#altura
+		la $t2, 1	#altura
 		
 		sw $a0, 0($s6)	 #valor 
 		sb $t0, 4($s6)	 #sbe
@@ -134,7 +136,7 @@ j main
         			sw	$t0, 4($sp)	# empilha 
 			        sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
 			        
-				lw $t2, 8($t0)	#esquerda
+				lw $t2, 8($t0)	#direita
 				la $a0, ($t2)	#no
 				la $a1, ($t1)	#key
 				
@@ -158,13 +160,14 @@ j main
 			sw	$t5, 4($sp)
 			sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO		
 			
-			la $t1, ($t5)
-			lw $a0, 4($t1)
+
+			lw $a0, 4($t0) #no pai
+			la $t4, ($t0)  #salvar o no pai
 			jal altura
 			la $t2, ($v0) # a
 			
-			la $t1, ($t5)
-			lw $a0, 8($t1)
+
+			lw $a0, 8($t4) #no pai
 			jal altura
 			la $t3, ($v0) # b
 			
@@ -177,7 +180,7 @@ j main
 			la $t1, ($v0)
 			addi $t1,$t1,1
 			
-			sb $t1, 12($t5) 
+			sb $t1, 12($t4) #no pai que recebe
 			
 			lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
 			lw	$t5, 4($sp)
@@ -207,7 +210,7 @@ j main
 			la $s0, ($t0)
 			
 			#left left case
-			blt $t2, 1, rightright
+			ble $t2, 1, rightright
 				lw $t4, 4($t0)
 				lw $t4, 0($t0) #left key
 				bgt $t1, $t4,rightright
@@ -217,7 +220,7 @@ j main
 					j volt
 					
 			#right right case
-			rightright: bgt $t2, -1, leftright
+			rightright: bge $t2, -1, leftright
 				lw $t4, 8($t0)
 				lw $t4, 0($t0) #right key
 				blt $t1,$t4,leftright
@@ -227,7 +230,7 @@ j main
 					la $t5, ($v0)
 					j volt
 
-			leftright: blt $t2, 1, rightleft
+			leftright: ble $t2, 1, rightleft
 				lw $t4, 8($t0)
 				lw $t4, 0($t0) #right key
 				blt $t4, $t1,rightleft
@@ -244,7 +247,7 @@ j main
 					la $t5, ($v0)
 					j volt
 			
-        		rightleft:
+        		rightleft: bge $t2, -1, volt
         			
         			li $v0, -1
         			bgt $t2, $v0, volt
@@ -282,7 +285,7 @@ j main
 				jr $ra
  	max:
 			la $t0, ($a0) # a
-			la $t1, ($a0) #b	
+			la $t1, ($a1) #b	
 			
 			blt $t0, $t1 , ELSEMAX
 				la $v0, ($t0)  # a>b
@@ -515,30 +518,35 @@ j main
 
 				#esquerda
 				lw $t1, 4($t0)
-				addiu   $sp,$sp,-8     # aloca 5 posições na pilha
-				sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
+				addiu   $sp,$sp,-12     # aloca 5 posições na pilha
+				sw	$t0, 8($sp)
 				sw	$t1, 4($sp)
+				sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
+
 				
 				la $a0, ($t1)
 				jal posOrder
 				
 				lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
 				lw	$t1,4($sp)
-				addiu   $sp,$sp,8
+				lw	$t0,8($sp)
+				addiu   $sp,$sp,12
 				
 				
 				#direita
 				lw $t2, 8($t0)
-        			addiu   $sp,$sp,-8     # aloca 5 posições na pilha
+        			addiu   $sp,$sp,-12     # aloca 5 posições na pilha
+				sw	$t0, 8($sp)
+				sw	$t1, 4($sp)
 				sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
-				sw	$t2, 4($sp)
 				
 				la $a0, ($t2)
 				jal posOrder
 				
 				lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
-				lw	$t2,4($sp)
-				addiu   $sp,$sp,8
+				lw	$t1,4($sp)
+				lw	$t0,8($sp)
+				addiu   $sp,$sp,12
         			
         			
         			
@@ -613,9 +621,10 @@ j main
 ##System##
 ##########
 	printString:
-		li $v0, 4
+		li $v0, 1
 		la $a0, ($t1)
 		syscall
+		jr $ra
 	printInt:
 		li $v0, 1
 		la $a0, ($t1)
