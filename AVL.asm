@@ -3,7 +3,7 @@
 	fileInput: .asciiz "tree.in"
 	fileOutput: .asciiz "tree.out"
 	buffer: .space 1024
-	ola: .asciiz "oi amigo"
+	pular_Linha: .asciiz "\n"
 	
 .text
 
@@ -66,9 +66,10 @@ j main
 			jal insere
 			la $t5, ($v0) #nova raiz
 			
+			la $s5,($t5) #novo root node
+			la $a0, ($s5)
+			jal posOrder
 			
-			#la $a0, estrutura
-			#jal posOrder
 			j exit
 
 ########
@@ -568,6 +569,7 @@ j main
         			
         			
         			
+        			lw $t0, 0($t0) #escrever o valor em t0 pra printar 
 			        la $t1, ($t0)
 			        addiu   $sp,$sp,-4     # aloca 1 posições na pilha
 				sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
@@ -642,6 +644,11 @@ j main
 		li $v0, 1
 		la $a0, ($t1)
 		syscall
+		
+		li $v0, 4
+		la $a0, pular_Linha
+		syscall
+		
 		jr $ra
 	printInt:
 		li $v0, 1
