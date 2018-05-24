@@ -37,7 +37,7 @@ j main
 		li $s7,10
 		li $t5, 0 #sem raiz
 		loop:
-			beq $s7, 40, sair
+			beq $s7, 0, sair
 			
 			#jal random
 			la $a1, ($s7) #valor
@@ -269,7 +269,7 @@ j main
 			
 			volt:
 			#return node
-			la $v0, ($t5)
+			la $v0, ($s0)
 			la $ra, ($s5)
 			jr $ra
    
