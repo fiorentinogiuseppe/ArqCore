@@ -54,8 +54,21 @@ j main
 			li $a1, 25 #valor
 			la $a0, ($t5)#raiz
 			jal insere
-			la $a0, estrutura
-			jal posOrder
+			la $t5, ($v0) #nova raiz
+			
+			li $a1, 5 #valor
+			la $a0, ($t5)#raiz
+			jal insere
+			la $t5, ($v0) #nova raiz
+						
+			li $a1, 2 #valor
+			la $a0, ($t5)#raiz
+			jal insere
+			la $t5, ($v0) #nova raiz
+			
+			
+			#la $a0, estrutura
+			#jal posOrder
 			j exit
 
 ########
@@ -451,7 +464,7 @@ j main
  			sw	$t1, 4($sp)
 			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
  			
- 			la $t7, ($t1)
+ 			la $t7, ($t0)
  			lw $a0, 4($t7) #dir
 			jal altura
 			la $t2, ($v0) # a
@@ -474,7 +487,7 @@ j main
 			lw $t2, 8($sp)
 			addiu $sp, $sp, 12
 			
-			sb $t5, 12($t1)
+			sb $t5, 12($t0)
  			
  			#x
  						
@@ -484,8 +497,8 @@ j main
 			sw      $t0, 0($sp)	# empilha o endereço de retorno par ao SO
 			
 			
-			lw $a0, 4($t0) 
-			la $s2,($t0)
+			lw $a0, 4($t1) 
+			la $s2,($t1)
 			jal altura
 			la $t2, ($v0) # a
 			
