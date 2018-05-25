@@ -2,70 +2,59 @@
 	estrutura: .space 1024  # |valor|sbe|sbd|altura|
 	fileInput: .asciiz "tree.in"
 	fileOutput: .asciiz "tree.out"
-	buffer: .space 1024
 	pular_Linha: .asciiz "\n"
+	buffer: .space 20
+	int: .space 1024
 	
 .text
-
-###obs percorrer em pos fixa e salvar no vetor e depois salvar o vetor em arquivo
-
-#################################################################
-#$v0-$v1 - expressoes de avaliação e retorno de funcoes #values	#
-#$a0-$a3 - parametros de subrotinas #arguments			#
-#$t0-t7 -  variaveis temporarias #temporaries			#
-#$s0-$s7 - variaveis globais #savede calue			#
-#$t8-$t9 - temporarias#temporaries				#
-#$gp - ponteiro global						#
-#$sp - ponteiro pilha						#
-#$s8/$fp - saved value/frame pointe				#
-#################################################################
+#ARQUIVO IN - Deve estar escrito em HEX
+#ARQUIVO OUT- Escrito em HEx
 
 
 j main
 ########
 ##Main##
 ########
-	#$s5- Root
 	main:
+		
+		jal file_open
+		jal file_read
+		jal file_close
+		
+		la $s1, int #estrutura para salvar		
+		
 		la $s5, estrutura #root node
 		la $s6, ($s5) 	  #atual position in the array
 		
-		#jal random
-		#la $a0, 10	  #valor 
-		#jal no	
+		la $t0, buffer #k
+		lb $t1, ($t0)
+		add $t0, $t0, 2
+		lb $t2, ($t0)
+		#semente 
+		la $t8, ($t2)
+		#tamanho max 
+		la $a3, ($t1)
 		
-		li $s7,10
+		li $s7,0
 		li $t5, 0 #sem raiz
 		loop:
-			beq $s7, 60, sair
+			beq $s7, $a3, sair
 			
-			#jal random
-			la $a1, ($s7) #valor
+			
+			la $a0, ($t8)
+			jal random
+			
+			la $a1, ($v0) #valor
 			la $a0, ($t5)#raiz
 			jal insere
 			
 			la $t5, ($v0) #nova raiz
-			addi $s7, $s7, 10 
+			addi $s7, $s7, 1 
 			#addi $t5, $t6, -16
 		j loop
 		
 
-		sair:
-			li $a1, 25 #valor
-			la $a0, ($t5)#raiz
-			jal insere
-			la $t5, ($v0) #nova raiz
-			
-			li $a1, 5 #valor
-			la $a0, ($t5)#raiz
-			jal insere
-			la $t5, ($v0) #nova raiz
-						
-			li $a1, 2 #valor
-			la $a0, ($t5)#raiz
-			jal insere
-			la $t5, ($v0) #nova raiz
-			
+		sair:			
 			la $s5,($t5) #novo root node
 			la $a0, ($s5)
 			jal posOrder
@@ -322,9 +311,6 @@ j main
 				sw	$t0, 4($sp)
 				sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
 				
-				#t1esquerda
-				#t2direita
-				#t3 subt
 				lw $a0, 4($t0) #esq
 				jal altura
 				la $t4, ($v0) # a
@@ -403,7 +389,6 @@ j main
 			
 			#y
 			
- 			#lw $a0, 4($t1) #esq
  			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
  			sw	$t2, 8($sp)
  			sw	$t1, 4($sp)
@@ -459,7 +444,6 @@ j main
 			
 			#y
 			
- 			#lw $a0, 4($t1) #esq
  			addiu   $sp,$sp,-12     # aloca 3 posições na pilha
  			sw	$t2, 8($sp)
  			sw	$t1, 4($sp)
@@ -574,6 +558,8 @@ j main
 			        addiu   $sp,$sp,-4     # aloca 1 posições na pilha
 				sw      $ra, 0($sp)	# empilha o endereço de retorno par ao SO
 				
+				la $a0, ($t1)
+			        jal fout
 			        jal printString
 			        
 			        lw      $ra,0($sp)      # ao voltar, recupera endereço de retorno da pilha
@@ -588,16 +574,36 @@ j main
 ##random##
 ##########
 	random:
-		li $v0, 42  # 42 is system call code to generate random int
-		li $a1, 10000 # $a1 is where you set the upper bound
-		syscall     # your generated number will be at $a0
+		la $t2, ($a0)
+		addi $v0, $zero, 30     # Syscall 30: System Time syscall
+		syscall                 # $a0 will contain the 32 LS bits of the system time
+		add $t0, $zero, $a0     # Save $a0 value in $t0 
+
+		addi $v0, $zero, 40      # Syscall 40: Random seed
+		add $a0, $zero, $zero   # Set RNG ID to 0
+		add $a1, $zero, $t0     # Set Random seed to
+		syscall
+
+		addi $v0, $zero, 42      # Syscall 42: Random int range
+		add $a0, $zero, $t2      # Set RNG ID to 0
+		addi $a1, $zero, 100     # Set upper bound to 4 (exclusive)
+		syscall                  # Generate a random number and put it in $a0
+		add $v0, $zero, $a0      # Copy the random number to $s1 and return $v0
+		
 		jr $ra
 
 
 ############
 ##arquivos##
 ############
-
+		
+	fout:
+		la $t0, ($a0)
+		sb $t0, 0($s1)
+		addi $s1, $s1, 1 #######################MODIFICAR DEPOIS
+		jr $ra
+		
+		
 	file_open:
 		li $v0, 13 #system call for open file
 		la $a0, fileInput #board file name
@@ -608,21 +614,29 @@ j main
 		jr $ra
 		
 	file_write:
-		li $v0,13           # open_file syscall code = 13
-    		la $a0,fileOutput # get the file name
-    		li $a1,9            # file flag = write
-    		li $a2, 0	# Mode 
-    		syscall
-    		move $s6,$v0        # save the file descriptor 
-
-    				       #write into the file
-    		li $v0, 15             # write_file syscall code = 15
-    		move $a0, $s6          # file descriptor (fileName)
-    		
-    		la $a1, ($t7)          # the text that will be written in the file
-    		la $a2, ($s7)            # file size? 
-    		syscall
-		jr $ra
+		###############################################################
+  		# Open (for writing) a file that does not exist
+		li   $v0, 13       # system call for open file
+		la   $a0, fileOutput     # output file name
+		li   $a1, 1        # Open for writing (flags are 0: read, 1: write)
+		li   $a2, 0        # mode is ignored
+		syscall            # open a file (file descriptor returned in $v0)
+		move $s6, $v0      # save the file descriptor 
+		###############################################################
+		# Write to file just opened
+		li   $v0, 15       # system call for write to file
+		move $a0, $s6      # file descriptor 
+		la $t0, int
+		#add $t0, $t0, 2
+		la   $a1, ($t0)   # address of buffer from which to write
+		li   $a2, 44      # hardcoded buffer length
+		syscall            # write to file
+		###############################################################
+		# Close the file 
+		li   $v0, 16       # system call for close file
+		move $a0, $s6      # file descriptor to close
+		syscall            # close file
+		###############################################################
 		
 	file_read:
 		li $v0, 14 #sytem call for rad from file
@@ -655,5 +669,7 @@ j main
 		la $a0, ($t1)
 		syscall
 	exit:
+		
+		jal file_write
 		li $v0, 10		# system call code for exit = 10
-		syscall	
+		syscall
