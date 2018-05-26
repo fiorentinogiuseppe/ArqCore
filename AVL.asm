@@ -586,7 +586,7 @@ j main
 
 		addi $v0, $zero, 42      # Syscall 42: Random int range
 		add $a0, $zero, $t2      # Set RNG ID to 0
-		addi $a1, $zero, 100     # Set upper bound to 4 (exclusive)
+		addi $a1, $zero, 10000     # Set upper bound to 4 (exclusive)
 		syscall                  # Generate a random number and put it in $a0
 		add $v0, $zero, $a0      # Copy the random number to $s1 and return $v0
 		
@@ -599,8 +599,13 @@ j main
 		
 	fout:
 		la $t0, ($a0)
-		sb $t0, 0($s1)
-		addi $s1, $s1, 1 #######################MODIFICAR DEPOIS
+		#alinhamento de memoria
+		div $t2, $s1, 4
+		mfhi $t2
+		beqz $t2, cont
+			add $s1, $s1, 1
+		cont:sw $t0, 0($s1)
+		addi $s1, $s1, 4 
 		jr $ra
 		
 		
@@ -629,7 +634,7 @@ j main
 		la $t0, int
 		#add $t0, $t0, 2
 		la   $a1, ($t0)   # address of buffer from which to write
-		li   $a2, 44      # hardcoded buffer length
+		li   $a2, 32      # hardcoded buffer length
 		syscall            # write to file
 		###############################################################
 		# Close the file 
