@@ -55,8 +55,7 @@ public class MyMIPS implements MIPS{
 		return null;
 	}
 
-	private void tipoI(State s, String inst, String op) {
-		//TODO analisar
+	private void tipoI(State s, String inst, String op) throws InvalidMemoryAlignmentExpcetion {
 		Integer rs = Integer.parseInt(inst.substring(6,11),2);
 		Integer rt = Integer.parseInt(inst.substring(11,16),2);
 		//Integer immediate = Integer.parseInt(inst.substring(16,32),2);
@@ -108,19 +107,66 @@ public class MyMIPS implements MIPS{
 				if(rs!=rt)
 					s.setPC(s.getPC()+4+BranchAddr);
 				break;
+			
 			case "100100": //LBU
-				//TODO Fazer
+				String ins = Integer.toBinaryString(s.readInstructionMemory(rs+SignExtImm));
+				String zerosLBU="000000000000000000000000";
+				String conc = zerosLBU+ins;
+				Integer resultLBU = Integer.parseInt(conc);
+				s.writeRegister(rt, resultLBU);		
 				break;
+				/*
+			case "": //LHU
+				break;
+			case ""://Lui
+				break;
+			case "": //lw
+				break;
+			*/
+			case "001101"://Ori
+				result1 = rsValue | ZeroExtImm;
+				s.writeRegister(rt, result1);
+				break;
+			case "001010": //SLTI
+				rsValue = binarySigned(completToLeft(Integer.toBinaryString(rsValue), '0', 32));
+				SignExtImm = binarySigned(completToLeft(Integer.toBinaryString(SignExtImm), '0', 32));
+				if(rsValue < SignExtImm) result1 = 1;
+				else result1 = 0;
+				s.writeRegister(rt, result1);
+				break;
+			case "001011": //SLTIU
+				if(rsValue < SignExtImm) result1 = 1;
+				else result1 = 0;
+				s.writeRegister(rt, result1);
+				break;
+			/*
+			case "": //SB
+				break;
+			case "": //SC
+				break;
+			case "": //SH
+				break;
+			case "": //SW
+				break;
+				*/
+				
 		}
 		
 	}
 
 	private void tipoJ(State s, String inst, String op) {
 		//Integer address = Integer.parseInt(inst.substring(6,32),2);
-		Integer JumpAddr = null;	 //TODO deselvolver essa equação
-		String part1=null; //PC+4op[31:28]
+		Integer JumpAddr = null;	 //TODO desenvolver essa equação
+
+		Integer p1 = s.getPC() + Integer.parseInt(inst.substring(0,4),2);  //PC+4[31:28]
+		String part1=Integer.toBinaryString(p1);
 		String part2=inst.substring(6,32); // address
 		String part3="000"; //2’b0
+		
+		//1100
+		//0000 10 00000000000000000000000101
+		//11000000000000000000000000010100
+
 		
 		JumpAddr = Integer.parseInt((part1+part2+part3),2);
 		
