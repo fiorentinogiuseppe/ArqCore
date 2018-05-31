@@ -25,9 +25,8 @@ public class MyMIPS implements MIPS{
 			s.writeRegister(28,  0x1800); //Global Pointer Localization  
 			s.writeRegister(29,  0x3ffc); //Stack Pointer Localization
 		}
-		//MODIFICAR AQUI
 		
-		String inst = completToLeft(Integer.toBinaryString(s.readInstructionMemory(s.getPC())), '0', 32);
+		String inst = completeLeftSide(Integer.toBinaryString(s.readInstructionMemory(s.getPC())), '0', 32);
 		String op = inst.substring(0,6);
 		
 		if(op.equals("000000"))
@@ -41,7 +40,7 @@ public class MyMIPS implements MIPS{
 		pcPlus4 = true;
 	}
 
-	private String completToLeft(String str, char c, int i) { 
+	private String completeLeftSide(String str, char c, int i) { 
 		// Caso a instrução tenha varios zeros antes este sera ignorado, mas é preciso usa-lo. Então essa classe existe
 		// Pensar em usar o >> é deslocamento logico, preenche sempre com zero a esquerda
 		String nstr = Character.toString(c);
@@ -60,7 +59,7 @@ public class MyMIPS implements MIPS{
 		Integer rt = Integer.parseInt(inst.substring(11,16),2);
 		//Integer immediate = Integer.parseInt(inst.substring(16,32),2);
 		Integer result = 0;
-		Integer rsValue = s.readRegister(rs);
+		Integer ValueRs = s.readRegister(rs);
 		
 		Integer SignExtImm; // {16{immediate[16]}, immediate} concatenar 16 immediate[16]'s e depois concatenar com immediate
 		Integer ZeroExtImm; // {16{1b'0}, immediate} concatenar 16 0's e depois concatenar com immediate
@@ -85,18 +84,18 @@ public class MyMIPS implements MIPS{
 		
 		switch(op){
 			case "001000": //ADDI
-				rsValue = binarySigned(completToLeft(Integer.toBinaryString(rsValue), '0', 32));
-				SignExtImm = binarySigned(completToLeft(Integer.toBinaryString(SignExtImm), '0', 32));
-				result = rsValue + SignExtImm;
+				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
+				SignExtImm = binarySigned(completeLeftSide(Integer.toBinaryString(SignExtImm), '0', 32));
+				result = ValueRs + SignExtImm;
 				s.writeRegister(rt, result);
 
 				break;
 			case "001001": //ADDIU
-				result = rsValue + SignExtImm;
+				result = ValueRs + SignExtImm;
 				s.writeRegister(rt, result);
 				break;
 			case "001100":	//ANDI
-				result = rsValue & ZeroExtImm;
+				result = ValueRs & ZeroExtImm;
 				s.writeRegister(rt, result);
 				break;
 			case "000100": //BEQ
@@ -115,29 +114,43 @@ public class MyMIPS implements MIPS{
 				Integer resultLBU = Integer.parseInt(conc);
 				s.writeRegister(rt, resultLBU);		
 				break;
-				/*
-			case "": //LHU
+				
+			case "100101": //LHU
+				String insLHU = Integer.toBinaryString(s.readInstructionMemory(rs+SignExtImm));
+				String zerosLHU="00000000000000000";
+				String concLHU = zerosLHU+insLHU;
+				Integer resultLHU = Integer.parseInt(concLHU);
+				s.writeRegister(rt, resultLHU);		
+				
 				break;
-			case ""://Lui
+				
+			case "001111"://Lui
+				String imm = inst.substring(16,32);
+				String zerosLUI="00000000000000000";
+				String concLUI = imm+zerosLUI;
+				Integer resultLUI = Integer.parseInt(concLUI);
+				s.writeRegister(rt, resultLUI);		
 				break;
-			case "": //lw
+				
+			case "100011": //lw
+				Integer insLW = s.readInstructionMemory(rs+SignExtImm);
+				s.writeRegister(rt, insLW);		
 				break;
-			*/
 			case "001101"://Ori
-				result1 = rsValue | ZeroExtImm;
-				s.writeRegister(rt, result1);
+				result = ValueRs | ZeroExtImm;
+				s.writeRegister(rt, result);
 				break;
 			case "001010": //SLTI
-				rsValue = binarySigned(completToLeft(Integer.toBinaryString(rsValue), '0', 32));
-				SignExtImm = binarySigned(completToLeft(Integer.toBinaryString(SignExtImm), '0', 32));
-				if(rsValue < SignExtImm) result1 = 1;
-				else result1 = 0;
-				s.writeRegister(rt, result1);
+				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
+				SignExtImm = binarySigned(completeLeftSide(Integer.toBinaryString(SignExtImm), '0', 32));
+				if(ValueRs < SignExtImm) result = 1;
+				else result = 0;
+				s.writeRegister(rt, result);
 				break;
 			case "001011": //SLTIU
-				if(rsValue < SignExtImm) result1 = 1;
-				else result1 = 0;
-				s.writeRegister(rt, result1);
+				if(ValueRs < SignExtImm) result = 1;
+				else result = 0;
+				s.writeRegister(rt, result);
 				break;
 			/*
 			case "": //SB
@@ -156,20 +169,17 @@ public class MyMIPS implements MIPS{
 
 	private void tipoJ(State s, String inst, String op) {
 		//Integer address = Integer.parseInt(inst.substring(6,32),2);
-		Integer JumpAddr = null;	 //TODO desenvolver essa equação
+		Integer JumpAddr = null;	 //TODO analisar equação
 
-		Integer p1 = s.getPC() + Integer.parseInt(inst.substring(0,4),2);  //PC+4[31:28]
-		String part1=Integer.toBinaryString(p1);
+		Integer PCP4 = s.getPC() + 4; // chamemos PC+4 de PCP4
+		String PCP4String = Integer.toBinaryString(PCP4); //PCP4[31:28] em verilog 
+		String complete = completeLeftSide(PCP4String, '0', 32);
+		String part1 = complete.substring(0, 3); // em java eh a posição 0 a 3
 		String part2=inst.substring(6,32); // address
 		String part3="000"; //2’b0
 		
-		//1100
-		//0000 10 00000000000000000000000101
-		//11000000000000000000000000010100
-
-		
 		JumpAddr = Integer.parseInt((part1+part2+part3),2);
-		
+
 		switch(op){
 			case "000010": //JUMP 
 				s.setPC(JumpAddr);
@@ -189,44 +199,44 @@ public class MyMIPS implements MIPS{
 		Integer shamt = Integer.parseInt(inst.substring(21,26),2);
 		String funct = inst.substring(26,32);
 		Integer result = 0;
-		Integer rsValue = s.readRegister(rs);
+		Integer ValueRs = s.readRegister(rs);
 		Integer rtValue = s.readRegister(rt);
 
 		switch(funct){
 			case "100000": //ADD
-				rsValue = binarySigned(completToLeft(Integer.toBinaryString(rsValue), '0', 32));
-				rtValue = binarySigned(completToLeft(Integer.toBinaryString(rtValue), '0', 32));
-				result = rsValue + rtValue;
+				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
+				rtValue = binarySigned(completeLeftSide(Integer.toBinaryString(rtValue), '0', 32));
+				result = ValueRs + rtValue;
 				s.writeRegister(rd, result);
 				break;
 			case "100001": //ADDU TODO ANALISAR
-				result = rsValue + rtValue;
+				result = ValueRs + rtValue;
 				s.writeRegister(rd, result);
 				break;
 			case "100100": //AND
-				result = rsValue & rtValue;
+				result = ValueRs & rtValue;
 				s.writeRegister(rd, result);
 				break;
 			case "001000": //JR
-				s.setPC(rsValue);
+				s.setPC(ValueRs);
 				break;
 			case "100111": //NOR
-				result = ~(rsValue | rtValue);
+				result = ~(ValueRs | rtValue);
 				s.writeRegister(rd, result);	
 				break;
 			case "100101": //OR
-				result = (rsValue | rtValue);
+				result = (ValueRs | rtValue);
 				s.writeRegister(rd, result);
 				break;
 			case "101010": //SLT
-				rsValue = binarySigned(completToLeft(Integer.toBinaryString(rsValue), '0', 32));
-				rtValue = binarySigned(completToLeft(Integer.toBinaryString(rtValue), '0', 32));
-				if(rsValue < rtValue) result = 1;
+				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
+				rtValue = binarySigned(completeLeftSide(Integer.toBinaryString(rtValue), '0', 32));
+				if(ValueRs < rtValue) result = 1;
 				else result = 0;
 				s.writeRegister(rd, result);
 				break;
 			case "101011": //SLTU
-				if(rsValue < rtValue) result = 1;
+				if(ValueRs < rtValue) result = 1;
 				else result = 0;
 				s.writeRegister(rd, result);
 				break;
@@ -239,13 +249,13 @@ public class MyMIPS implements MIPS{
 				s.writeRegister(rd, result);
 				break;
 			case "100010"://SUB
-				rsValue = binarySigned(completToLeft(Integer.toBinaryString(rsValue), '0', 32));
-				rtValue = binarySigned(completToLeft(Integer.toBinaryString(rtValue), '0', 32));
-				result = rsValue - rtValue;
+				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
+				rtValue = binarySigned(completeLeftSide(Integer.toBinaryString(rtValue), '0', 32));
+				result = ValueRs - rtValue;
 				s.writeRegister(rd, result);
 				break;
 			case "100011":  //SUBU
-				result = rsValue - rtValue;
+				result = ValueRs - rtValue;
 				s.writeRegister(rd, result);
 				break;				
 		}
@@ -292,45 +302,3 @@ public class MyMIPS implements MIPS{
 	}
 
 }
-
-//TODO
-//the curly braces are for concatenation. The extra curly braces around 16{a[16]} are the replication operator.
-//{ 
-//a[16], a[15], a[15], a[15], a[15], a[15], a[15], a[15],
-//a[15], a[15], a[1
-/*
-assign result = {{16{a[15]}}, {a[15:0]}};
-is the same as:
-
-assign result[ 0] = a[ 0];
-assign result[ 1] = a[ 1];
-assign result[ 2] = a[ 2];
-assign result[ 3] = a[ 3];
-assign result[ 4] = a[ 4];
-assign result[ 5] = a[ 5];
-assign result[ 6] = a[ 6];
-assign result[ 7] = a[ 7];
-assign result[ 8] = a[ 8];
-assign result[ 9] = a[ 9];
-assign result[10] = a[10];
-assign result[11] = a[11];
-assign result[12] = a[12];
-assign result[13] = a[13];
-assign result[14] = a[14];
-assign result[15] = a[15];
-assign result[16] = a[15];
-assign result[17] = a[15];
-assign result[18] = a[15];
-assign result[19] = a[15];
-assign result[20] = a[15];
-assign result[21] = a[15];
-assign result[22] = a[15];
-assign result[23] = a[15];
-assign result[24] = a[15];
-assign result[25] = a[15];
-assign result[26] = a[15];
-assign result[27] = a[15];
-assign result[28] = a[15];
-assign result[29] = a[15];
-assign result[30] = a[15];
-assign result[31] = a[15];*/
