@@ -152,17 +152,35 @@ public class MyMIPS implements MIPS{
 				else result = 0;
 				s.writeRegister(rt, result);
 				break;
-			/*
-			case "": //SB
+			
+			case "101000": //SB
+				s.writeByteDataMemory(rs+SignExtImm, rt);
 				break;
-			case "": //SC
+
+			case "111000": //SC
+				s.writeHalfwordDataMemory(rs+SignExtImm, rt);
+				if(s.isHalted()) result = 0; //TODO analisar
+				else result = 1;
+				s.writeRegister(rt, result);
+				/*
+				 atomic operation: means “all or nothing”. Either we succeed in completing the operation with no interruptions
+				 or we fail to even begin the operation (because someone else was doing an atomic operation)
+				 */
 				break;
-			case "": //SH
+
+			case "101001": //SH
+				s.writeHalfwordDataMemory(rs+SignExtImm, rt);
 				break;
-			case "": //SW
+
+			case "101011": //SW
+				s.writeWordDataMemory(rs+SignExtImm, rt);
+
 				break;
-				*/
-				
+				//TODO falta ARITHMETIC CORE INSTRUCTION SET
+				//lwc1
+				//ldc1
+				//swc1
+				//sdc1
 		}
 		
 	}
@@ -258,6 +276,15 @@ public class MyMIPS implements MIPS{
 				result = ValueRs - rtValue;
 				s.writeRegister(rd, result);
 				break;				
+			//TODO falta ARITHMETIC CORE INSTRUCTION SET
+				//div
+				//divu
+				//mfhi
+				//mflo
+				//mfc0
+				//mult
+				//multu
+				//sra
 		}
 	}
 
