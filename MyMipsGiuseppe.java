@@ -28,16 +28,19 @@ public class MyMIPS implements MIPS{
 		
 		String inst = completeLeftSide(Integer.toBinaryString(s.readInstructionMemory(s.getPC())), '0', 32);
 		String op = inst.substring(0,6);
+
 		
 		if(op.equals("000000"))
 			tipoR(s, inst);
-		else if(op.equals("000010"))
+		else if(op.equals("000010") || op.equals("000011"))
 			tipoJ(s, inst, op);
 		else
 			tipoI(s, inst, op);
+		System.out.println("AAAAAA: "+s.getPC()+"\npcPlus4"+pcPlus4);
 		if(pcPlus4)
 			s.setPC(s.getPC()+4);
 		pcPlus4 = true;
+		System.out.println("VAIII: "+s.getPC()+"\npcPlus4"+pcPlus4);
 	}
 
 	private String completeLeftSide(String str, char c, int i) { 
@@ -60,51 +63,62 @@ public class MyMIPS implements MIPS{
 		//Integer immediate = Integer.parseInt(inst.substring(16,32),2);
 		Integer result = 0;
 		Integer ValueRs = s.readRegister(rs);
+		Integer ValueRt = s.readRegister(rt);
 		
 		Integer SignExtImm; // {16{immediate[16]}, immediate} concatenar 16 immediate[16]'s e depois concatenar com immediate
 		Integer ZeroExtImm; // {16{1b'0}, immediate} concatenar 16 0's e depois concatenar com immediate
 		Integer BranchAddr; // {14{immediate[16]}, immediate , 2'b0} concatenar 14 immediate[16] e depois concatenar com immediate e depois com 2'b0
 		
 		//String de concatenacao 
-		String repetSignExtImm = inst.substring(16); 
-		String repetZeroExtImm = "0";
-		String repetBranchAddr = inst.substring(16);
-		String zeros ="000";
-		
-		//concatenacao
-		for(int i=0;i<15;i++){ //como ja ocorreu um elemento apenas. Agora precisa concatenas 15 valores
-			repetSignExtImm += inst.substring(16);
-			repetZeroExtImm += "0";
-			if(i<12) repetBranchAddr += inst.substring(15); //como so precisa de 14 e ja foi feito uma
-		}
 
-		SignExtImm = Integer.parseInt((repetSignExtImm + inst.substring(16,32)),2); //valor do SignExtImm
-		ZeroExtImm = Integer.parseInt((repetZeroExtImm + inst.substring(16,32)),2); //valor do ZeroExtImm
-		BranchAddr = Integer.parseInt((repetBranchAddr + inst.substring(16,32) + zeros),2); //Valor do BranchAddr
+			
+		String repetSignExtImm = inst.substring(16,17); 
+		String repetZeroExtImm = "0";
+		String repetBranchAddr = inst.substring(16,17);
+		String zeros ="000";
+		//concatenacao
+
+		for(int i=0;i<15;i++){ //como ja ocorreu um elemento apenas. Agora precisa concatenas 15 valores
+			repetSignExtImm += inst.substring(16,17);
+			repetZeroExtImm += "0";
+			if(i<12) repetBranchAddr += inst.substring(16,17); //como so precisa de 14 e ja foi feito uma
+		}
 		
+
+		SignExtImm = binarySigned(repetSignExtImm + inst.substring(16,32)); //valor do SignExtImm
+		ZeroExtImm = Integer.parseInt((repetZeroExtImm + inst.substring(16,32)),2); //valor do ZeroExtImm
+		BranchAddr =  binarySigned(repetBranchAddr + inst.substring(16,32) + zeros); //Valor do BranchAddr
+
 		switch(op){
-			case "001000": //ADDI
+			case "001000": //ADDI OK
 				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
 				SignExtImm = binarySigned(completeLeftSide(Integer.toBinaryString(SignExtImm), '0', 32));
 				result = ValueRs + SignExtImm;
 				s.writeRegister(rt, result);
 
 				break;
-			case "001001": //ADDIU
+			case "001001": //ADDIU OK
 				result = ValueRs + SignExtImm;
 				s.writeRegister(rt, result);
 				break;
-			case "001100":	//ANDI
+			case "001100":	//ANDI OK
 				result = ValueRs & ZeroExtImm;
 				s.writeRegister(rt, result);
 				break;
-			case "000100": //BEQ
-				if(rs==rt)
-					s.setPC(s.getPC()+4+BranchAddr);
+			case "000100": //BEQ OK
+			
+				if(ValueRs==ValueRt){
+					result = s.getPC()+BranchAddr;
+					s.setPC(result);
+					pcPlus4 = false;
+				}
 				break;
-			case "000101": //BNE
-				if(rs!=rt)
-					s.setPC(s.getPC()+4+BranchAddr);
+			case "000101": //BNE OK
+				if(ValueRs!=ValueRt){
+					s.setPC(s.getPC()+BranchAddr);
+					pcPlus4 = false;
+				}
+
 				break;
 			
 			case "100100": //LBU
@@ -156,25 +170,11 @@ public class MyMIPS implements MIPS{
 			case "101000": //SB
 				s.writeByteDataMemory(rs+SignExtImm, rt);
 				break;
-
-			case "111000": //SC
-				s.writeHalfwordDataMemory(rs+SignExtImm, rt);
-				if(s.isHalted()) result = 0; //TODO analisar
-				else result = 1;
-				s.writeRegister(rt, result);
-				/*
-				 atomic operation: means “all or nothing”. Either we succeed in completing the operation with no interruptions
-				 or we fail to even begin the operation (because someone else was doing an atomic operation)
-				 */
-				break;
-
 			case "101001": //SH
 				s.writeHalfwordDataMemory(rs+SignExtImm, rt);
 				break;
-
 			case "101011": //SW
 				s.writeWordDataMemory(rs+SignExtImm, rt);
-
 				break;
 				//TODO falta ARITHMETIC CORE INSTRUCTION SET
 				//lwc1
@@ -185,32 +185,42 @@ public class MyMIPS implements MIPS{
 		
 	}
 
-	private void tipoJ(State s, String inst, String op) {
+	private void tipoJ(State s, String inst, String op) { //100% okay
+		System.out.println(inst);
 		//Integer address = Integer.parseInt(inst.substring(6,32),2);
 		Integer JumpAddr = null;	 //TODO analisar equação
 
 		Integer PCP4 = s.getPC() + 4; // chamemos PC+4 de PCP4
-		String PCP4String = Integer.toBinaryString(PCP4); //PCP4[31:28] em verilog 
-		String complete = completeLeftSide(PCP4String, '0', 32);
-		String part1 = complete.substring(0, 3); // em java eh a posição 0 a 3
-		String part2=inst.substring(6,32); // address
-		String part3="000"; //2’b0
-		
-		JumpAddr = Integer.parseInt((part1+part2+part3),2);
+		System.out.println("PCP4: "+PCP4);
 
+		String PCP4String = Integer.toBinaryString(PCP4); //PCP4[31:28] em verilog 
+		System.out.println("PCP4String: "+PCP4String);
+		String complete = completeLeftSide(PCP4String, '0', 32);
+		System.out.println("Complete: "+complete);
+		String part1 = complete.substring(0, 3); // em java eh a posição 0 a 3
+		System.out.println("Complete: "+part1);
+		String part2=inst.substring(6,32); // address
+		System.out.println("Complete: "+part2);
+		String part3="00"; //2’b0
+		System.out.println("Complete: "+part3);
+		
+		JumpAddr = Integer.parseInt((part1+part2+part3),2); 
+		System.out.println("JumpAddr: "+JumpAddr);
 		switch(op){
-			case "000010": //JUMP 
+			case "000010": //JUMP OK
 				s.setPC(JumpAddr);
+				pcPlus4 = false;
 				break;
-			case "000011": //JUMP AND LINK
+			case "000011": //JUMP AND LINK OK
+				System.out.println("JALLLL");
 				s.writeRegister(31,  s.getPC()+4); 
 				s.setPC(JumpAddr);
+				pcPlus4 = false;
 				break;				
 		}		
 	}
 
 	private void tipoR(State s, String inst) {
-
 		Integer rs = Integer.parseInt(inst.substring(6,11),2);
 		Integer rt = Integer.parseInt(inst.substring(11,16),2);
 		Integer rd = Integer.parseInt(inst.substring(16,21),2);
@@ -221,13 +231,15 @@ public class MyMIPS implements MIPS{
 		Integer rtValue = s.readRegister(rt);
 
 		switch(funct){
-			case "100000": //ADD
+			case "100000": //ADD OK
+				
+
 				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
 				rtValue = binarySigned(completeLeftSide(Integer.toBinaryString(rtValue), '0', 32));
 				result = ValueRs + rtValue;
 				s.writeRegister(rd, result);
 				break;
-			case "100001": //ADDU TODO ANALISAR
+			case "100001": //ADDU 
 				result = ValueRs + rtValue;
 				s.writeRegister(rd, result);
 				break;
