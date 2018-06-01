@@ -9,14 +9,14 @@ import br.ufrpe.deinfo.aoc.mips.MIPS;
 import br.ufrpe.deinfo.aoc.mips.Simulator;
 import br.ufrpe.deinfo.aoc.mips.State;
 
-public class MIPSteste implements MIPS{
+public class MIPSExample implements MIPS{
 	
 	private boolean pcPlus4;
 
 	@SuppressWarnings("unused")
 	private ConsoleReader console;
 	
-	public MyMIPS() throws IOException {
+	public MIPSExample() throws IOException {
 		this.console = Simulator.getConsole();
 	}
 	@Override
@@ -147,7 +147,7 @@ public class MIPSteste implements MIPS{
 				break;
 				
 			case "100011": //lw
-				Integer insLW = s.readInstructionMemory(rs+SignExtImm);
+				Integer insLW = s.readWordDataMemory(ValueRs +SignExtImm);
 				s.writeRegister(rt, insLW);		
 				break;
 			case "001101"://Ori
@@ -331,7 +331,7 @@ public class MIPSteste implements MIPS{
 	
 	public static void main(String[] args) {
 		try {
-			Simulator.setMIPS(new MyMIPS());
+			Simulator.setMIPS(new MIPSExample());
 			Simulator.setLogLevel(Simulator.LogLevel.INFO);
 			Simulator.start();
 		} catch (Exception e) {		
