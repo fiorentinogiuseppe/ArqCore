@@ -28,19 +28,15 @@ public class MyMIPS implements MIPS{
 		
 		String inst = completeLeftSide(Integer.toBinaryString(s.readInstructionMemory(s.getPC())), '0', 32);
 		String op = inst.substring(0,6);
-
-		
 		if(op.equals("000000"))
 			tipoR(s, inst);
 		else if(op.equals("000010") || op.equals("000011"))
 			tipoJ(s, inst, op);
 		else
 			tipoI(s, inst, op);
-		System.out.println("AAAAAA: "+s.getPC()+"\npcPlus4"+pcPlus4);
 		if(pcPlus4)
 			s.setPC(s.getPC()+4);
 		pcPlus4 = true;
-		System.out.println("VAIII: "+s.getPC()+"\npcPlus4"+pcPlus4);
 	}
 
 	private String completeLeftSide(String str, char c, int i) { 
@@ -58,6 +54,7 @@ public class MyMIPS implements MIPS{
 	}
 
 	private void tipoI(State s, String inst, String op) throws InvalidMemoryAlignmentExpcetion {
+		
 		Integer rs = Integer.parseInt(inst.substring(6,11),2);
 		Integer rt = Integer.parseInt(inst.substring(11,16),2);
 		//Integer immediate = Integer.parseInt(inst.substring(16,32),2);
@@ -84,11 +81,9 @@ public class MyMIPS implements MIPS{
 			if(i<12) repetBranchAddr += inst.substring(16,17); //como so precisa de 14 e ja foi feito uma
 		}
 		
-
 		SignExtImm = binarySigned(repetSignExtImm + inst.substring(16,32)); //valor do SignExtImm
 		ZeroExtImm = Integer.parseInt((repetZeroExtImm + inst.substring(16,32)),2); //valor do ZeroExtImm
 		BranchAddr =  binarySigned(repetBranchAddr + inst.substring(16,32) + zeros); //Valor do BranchAddr
-
 		switch(op){
 			case "001000": //ADDI OK
 				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
@@ -121,98 +116,86 @@ public class MyMIPS implements MIPS{
 
 				break;
 			
-			case "100100": //LBU
-				String ins = Integer.toBinaryString(s.readInstructionMemory(rs+SignExtImm));
+			case "100100": //LBU OK
+				String ins = Integer.toBinaryString(s.readWordDataMemory(ValueRs+SignExtImm));
 				String zerosLBU="000000000000000000000000";
 				String conc = zerosLBU+ins;
-				Integer resultLBU = Integer.parseInt(conc);
+				Integer resultLBU = Integer.parseInt(conc,2);
 				s.writeRegister(rt, resultLBU);		
 				break;
 				
-			case "100101": //LHU
-				String insLHU = Integer.toBinaryString(s.readInstructionMemory(rs+SignExtImm));
-				String zerosLHU="00000000000000000";
+			case "100101": //LHU OK
+				String insLHU = Integer.toBinaryString(s.readWordDataMemory(ValueRs+SignExtImm));
+				String zerosLHU="0000000000000000";
 				String concLHU = zerosLHU+insLHU;
-				Integer resultLHU = Integer.parseInt(concLHU);
+				Integer resultLHU = Integer.parseInt(concLHU,2);
 				s.writeRegister(rt, resultLHU);		
 				
 				break;
 				
-			case "001111"://Lui
+			case "001111"://Lui OK
 				String imm = inst.substring(16,32);
-				String zerosLUI="00000000000000000";
+				String zerosLUI="0000000000000000";
 				String concLUI = imm+zerosLUI;
-				Integer resultLUI = Integer.parseInt(concLUI);
+				Integer resultLUI = binarySigned(concLUI);
 				s.writeRegister(rt, resultLUI);		
 				break;
 				
-			case "100011": //lw
-				Integer insLW = s.readInstructionMemory(rs+SignExtImm);
+			case "100011": //lw OK
+				Integer insLW = s.readWordDataMemory(ValueRs+SignExtImm);
 				s.writeRegister(rt, insLW);		
 				break;
-			case "001101"://Ori
+			case "001101"://Ori OK
 				result = ValueRs | ZeroExtImm;
 				s.writeRegister(rt, result);
 				break;
-			case "001010": //SLTI
+			case "001010": //SLTI OK
 				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
 				SignExtImm = binarySigned(completeLeftSide(Integer.toBinaryString(SignExtImm), '0', 32));
 				if(ValueRs < SignExtImm) result = 1;
 				else result = 0;
 				s.writeRegister(rt, result);
 				break;
-			case "001011": //SLTIU
+			case "001011": //SLTIU OK
 				if(ValueRs < SignExtImm) result = 1;
 				else result = 0;
 				s.writeRegister(rt, result);
 				break;
 			
-			case "101000": //SB
-				s.writeByteDataMemory(rs+SignExtImm, rt);
+			case "101000": //SB OK
+				s.writeByteDataMemory(rs+SignExtImm, ValueRt);
 				break;
-			case "101001": //SH
-				s.writeHalfwordDataMemory(rs+SignExtImm, rt);
+			case "101001": //SH 
+				s.writeHalfwordDataMemory(rs+SignExtImm, ValueRt);
 				break;
-			case "101011": //SW
-				s.writeWordDataMemory(rs+SignExtImm, rt);
+			case "101011": //SW OK
+				result = ValueRs+SignExtImm;
+				s.writeWordDataMemory(result, ValueRt);
 				break;
-				//TODO falta ARITHMETIC CORE INSTRUCTION SET
-				//lwc1
-				//ldc1
-				//swc1
-				//sdc1
+				
 		}
 		
 	}
 
 	private void tipoJ(State s, String inst, String op) { //100% okay
-		System.out.println(inst);
 		//Integer address = Integer.parseInt(inst.substring(6,32),2);
-		Integer JumpAddr = null;	 //TODO analisar equação
+		Integer JumpAddr = null;	 
 
 		Integer PCP4 = s.getPC() + 4; // chamemos PC+4 de PCP4
-		System.out.println("PCP4: "+PCP4);
 
 		String PCP4String = Integer.toBinaryString(PCP4); //PCP4[31:28] em verilog 
-		System.out.println("PCP4String: "+PCP4String);
 		String complete = completeLeftSide(PCP4String, '0', 32);
-		System.out.println("Complete: "+complete);
 		String part1 = complete.substring(0, 3); // em java eh a posição 0 a 3
-		System.out.println("Complete: "+part1);
 		String part2=inst.substring(6,32); // address
-		System.out.println("Complete: "+part2);
 		String part3="00"; //2’b0
-		System.out.println("Complete: "+part3);
 		
 		JumpAddr = Integer.parseInt((part1+part2+part3),2); 
-		System.out.println("JumpAddr: "+JumpAddr);
 		switch(op){
 			case "000010": //JUMP OK
 				s.setPC(JumpAddr);
 				pcPlus4 = false;
 				break;
 			case "000011": //JUMP AND LINK OK
-				System.out.println("JALLLL");
 				s.writeRegister(31,  s.getPC()+4); 
 				s.setPC(JumpAddr);
 				pcPlus4 = false;
@@ -239,64 +222,57 @@ public class MyMIPS implements MIPS{
 				result = ValueRs + rtValue;
 				s.writeRegister(rd, result);
 				break;
-			case "100001": //ADDU 
+			case "100001": //ADDU  OK
 				result = ValueRs + rtValue;
 				s.writeRegister(rd, result);
 				break;
-			case "100100": //AND
+			case "100100": //AND OK
 				result = ValueRs & rtValue;
 				s.writeRegister(rd, result);
 				break;
-			case "001000": //JR
+			case "001000": //JR OK
 				s.setPC(ValueRs);
+				pcPlus4 = false;
 				break;
-			case "100111": //NOR
+			case "100111": //NOR OK
 				result = ~(ValueRs | rtValue);
 				s.writeRegister(rd, result);	
 				break;
-			case "100101": //OR
+			case "100101": //OR OK
 				result = (ValueRs | rtValue);
 				s.writeRegister(rd, result);
 				break;
-			case "101010": //SLT
+			case "101010": //SLT OK
 				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
 				rtValue = binarySigned(completeLeftSide(Integer.toBinaryString(rtValue), '0', 32));
 				if(ValueRs < rtValue) result = 1;
 				else result = 0;
 				s.writeRegister(rd, result);
 				break;
-			case "101011": //SLTU
+			case "101011": //SLTU OK
 				if(ValueRs < rtValue) result = 1;
 				else result = 0;
 				s.writeRegister(rd, result);
 				break;
-			case "000000": //SLL
+			case "000000": //SLL OK
 				result = rtValue << shamt;
 				s.writeRegister(rd, result);
 				break;
-			case "000010": //SRL
+			case "000010": //SRL OK
 				result = rtValue >> shamt;
 				s.writeRegister(rd, result);
 				break;
-			case "100010"://SUB
+			case "100010"://SUB OK
 				ValueRs = binarySigned(completeLeftSide(Integer.toBinaryString(ValueRs), '0', 32));
 				rtValue = binarySigned(completeLeftSide(Integer.toBinaryString(rtValue), '0', 32));
 				result = ValueRs - rtValue;
 				s.writeRegister(rd, result);
 				break;
-			case "100011":  //SUBU
+			case "100011":  //SUBU OK
 				result = ValueRs - rtValue;
 				s.writeRegister(rd, result);
 				break;				
-			//TODO falta ARITHMETIC CORE INSTRUCTION SET
-				//div
-				//divu
-				//mfhi
-				//mflo
-				//mfc0
-				//mult
-				//multu
-				//sra
+			
 		}
 	}
 
