@@ -312,9 +312,9 @@ public class MyMIPS implements MIPS{
 	
 	public static void main(String[] args) {
 		try {
-			MS.setMIPS(new MyMIPS());
-			MS.setLogLevel(MS.LogLevel.INFO);
-			MS.start();
+			Simulator.setMIPS(new MyMIPS());
+			Simulator.setLogLevel(Simulator.LogLevel.INFO);
+			Simulator.start();
 
 		} catch (Exception e) {		
 			e.printStackTrace();
