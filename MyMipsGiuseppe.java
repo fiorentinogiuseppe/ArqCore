@@ -1,3 +1,4 @@
+
 package br.ufrpe.deinfo.aoc.mips.example;
 
 
@@ -25,6 +26,7 @@ public class MyMIPS implements MIPS{
 			s.writeRegister(28,  0x1800); //Global Pointer Localization  
 			s.writeRegister(29,  0x3ffc); //Stack Pointer Localization
 		}
+
 		
 		String inst = completeLeftSide(Integer.toBinaryString(s.readInstructionMemory(s.getPC())), '0', 32);
 		String op = inst.substring(0,6);
@@ -50,11 +52,12 @@ public class MyMIPS implements MIPS{
 			
 			return nstr+str;
 		}
+		else if(str.length()==i) return str;
 		return null;
 	}
 
 	private void tipoI(State s, String inst, String op) throws InvalidMemoryAlignmentExpcetion {
-		
+
 		Integer rs = Integer.parseInt(inst.substring(6,11),2);
 		Integer rt = Integer.parseInt(inst.substring(11,16),2);
 		//Integer immediate = Integer.parseInt(inst.substring(16,32),2);
@@ -117,17 +120,19 @@ public class MyMIPS implements MIPS{
 				break;
 			
 			case "100100": //LBU OK
-				String ins = Integer.toBinaryString(s.readWordDataMemory(ValueRs+SignExtImm));
+				String ins = completeLeftSide((Integer.toBinaryString(s.readWordDataMemory(ValueRs+SignExtImm))),'0',32); //ins = M[R[rs]+SignExtImm]
+				String parte  = ins.substring(24,32);// parte = ins(7:0)
 				String zerosLBU="000000000000000000000000";
-				String conc = zerosLBU+ins;
+				String conc = zerosLBU+parte;
 				Integer resultLBU = Integer.parseInt(conc,2);
 				s.writeRegister(rt, resultLBU);		
 				break;
 				
 			case "100101": //LHU OK
-				String insLHU = Integer.toBinaryString(s.readWordDataMemory(ValueRs+SignExtImm));
+				String insLHU = completeLeftSide((Integer.toBinaryString(s.readWordDataMemory(ValueRs+SignExtImm))), '0', 32);//ins = M[R[rs]+SignExtImm]
+				String parteLHU  = insLHU.substring(16,32); //parte = ins(15:0)
 				String zerosLHU="0000000000000000";
-				String concLHU = zerosLHU+insLHU;
+				String concLHU = zerosLHU+parteLHU;
 				Integer resultLHU = Integer.parseInt(concLHU,2);
 				s.writeRegister(rt, resultLHU);		
 				
@@ -307,9 +312,10 @@ public class MyMIPS implements MIPS{
 	
 	public static void main(String[] args) {
 		try {
-			Simulator.setMIPS(new MyMIPS());
-			Simulator.setLogLevel(Simulator.LogLevel.INFO);
-			Simulator.start();
+			MS.setMIPS(new MyMIPS());
+			MS.setLogLevel(MS.LogLevel.INFO);
+			MS.start();
+
 		} catch (Exception e) {		
 			e.printStackTrace();
 		}	
