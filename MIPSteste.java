@@ -145,7 +145,8 @@ public class MyMIPS implements MIPS{
 				s.writeRegister(rt, resultLHU);		
 				
 				break;
-				
+				//Esta instrucao carrega o valor contido no imediato (16 bits) 
+				//E desloca 16 bits para a esquerda (acrescentando 16 0s a direita)
 			case "001111"://Lui OK
 				String imm = inst.substring(16,32);
 				String zerosLUI="0000000000000000";
